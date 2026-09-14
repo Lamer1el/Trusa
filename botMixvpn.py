@@ -7,7 +7,7 @@ import telebot
 from telebot import types
 
 # ---------------- CONFIG ----------------
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8981461999:AAFgNO-DdO6QZ3YAuZ9eM8ZmEkoAsD2xWkE").strip()
 CHANNEL = os.environ.get("CHANNEL_USERNAME", "@lamer42").strip()  # канал для проверки подписки
 OPERATOR_ID = 6716592576
 CHANNEL_LINK = "https://t.me/lamer42"
