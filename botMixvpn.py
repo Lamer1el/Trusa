@@ -2,13 +2,16 @@ import os
 import json
 import time
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 import requests
 import telebot
 from telebot import types
 
 # ---------------- CONFIG ----------------
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8").strip()
-CHANNEL = os.environ.get("CHANNEL_USERNAME", "@lamer42").strip()  # канал для проверки подписки
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8981461999:AAFgNO-DdO6QZ3YAuZ9eM8ZmEkoAsD2xWkE").strip()
+CHANNEL = os.environ.get("CHANNEL_USERNAME", "@lamer42").strip()
 OPERATOR_ID = 6716592576
 CHANNEL_LINK = "https://t.me/lamer42"
 STICKER_PACK = "https://t.me/addstickers/MellstroySticker5"
@@ -18,8 +21,8 @@ PHOTO_SUB  = "https://raw.githubusercontent.com/Lamer1el/Trusa/main/file_0000000
 PHOTO_MENU = "https://raw.githubusercontent.com/Lamer1el/Trusa/main/file_0000000038d4822fa6ce954cedc7238e.png"
 PHOTO_GET  = "https://raw.githubusercontent.com/Lamer1el/Trusa/main/file_00000000dfb481f488a0e9a61922e7fd.png"
 
-# Сюда можно вставить file_id стикеров из пака, тогда они будут отправляться с сообщениями
-STICKERS = []  # например: ["CAACAgIAAxkBAAE...", "CAACAgIAAxkBAAE..."]
+# Сюда можно вставить file_id стикеров из пака MellstroySticker5 — они будут отправляться вместе с сообщениями
+STICKERS = []
 
 if not BOT_TOKEN:
     raise SystemExit("❌ Не задана переменная окружения BOT_TOKEN")
@@ -135,18 +138,16 @@ def kb_back(cb="back"):
 
 # ---------------- SENDERS ----------------
 def send_photo_or_text(chat_id, photo, text, kb, sticker=False):
-    msg = None
     try:
-        msg = bot.send_photo(chat_id, photo, caption=text, reply_markup=kb)
+        bot.send_photo(chat_id, photo, caption=text, reply_markup=kb)
     except Exception as e:
         logging.warning(f"photo err: {e}")
-        msg = bot.send_message(chat_id, text, reply_markup=kb)
+        bot.send_message(chat_id, text, reply_markup=kb)
     if sticker and STICKERS:
         try:
             bot.send_sticker(chat_id, STICKERS[0])
         except Exception:
             pass
-    return msg
 
 
 def send_main(chat_id):
@@ -440,7 +441,6 @@ def handle_all(m):
                     except Exception as e:
                         bot.send_message(OPERATOR_ID, f"❌ Не доставлено: {e}")
                     return
-        # если оператор просто написал что-то — показываем админку
         cmd_admin(m)
         return
 
@@ -500,8 +500,29 @@ def handle_all(m):
         send_main(uid)
 
 
+# ---------------- HTTP HEALTH SERVER (для Render Web Service) ----------------
+class _Health(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"MixVpn bot is alive")
+
+    def log_message(self, *args):
+        pass
+
+
+def _run_http():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), _Health)
+    logging.info(f"🌐 Health-сервер запущен на порту {port}")
+    server.serve_forever()
+
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
+    threading.Thread(target=_run_http, daemon=True).start()
+
     logging.info("🚀 MixVpn bot starting...")
     while True:
         try:
